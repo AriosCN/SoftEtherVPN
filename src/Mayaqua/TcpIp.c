@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Mayaqua Kernel
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -669,7 +669,6 @@ bool AdjustTcpMssL3(UCHAR *src, UINT src_size, UINT mss)
 	if (ip_ver == 4)
 	{
 		UINT ip_header_size;
-		UINT ip_total_length;
 		// IPv4
 		if (src_size < sizeof(IPV4_HEADER))
 		{
@@ -710,22 +709,8 @@ bool AdjustTcpMssL3(UCHAR *src, UINT src_size, UINT mss)
 			return false;
 		}
 
-		ip_total_length = READ_USHORT(&ip->TotalLength);
-
-		if (ip_total_length < ip_header_size)
-		{
-			// Invalid total length
-			return false;
-		}
-
-		if (src_size < ip_total_length)
-		{
-			// No total length
-			return false;
-		}
-
 		src += ip_header_size;
-		src_size = ip_total_length - ip_header_size;
+		src_size -= ip_header_size;
 
 		if (src_size < sizeof(TCP_HEADER))
 		{
@@ -1840,17 +1825,22 @@ PKT *ParsePacketEx4(UCHAR *buf, UINT size, bool no_l3, UINT vlan_type_id, bool b
 		}
 	}
 
-	if (no_http == false)
+	if (true)
 	{
 		USHORT port_raw = Endian16(80);
 		USHORT port_raw2 = Endian16(8080);
 		USHORT port_raw3 = Endian16(443);
+		USHORT port_raw4 = Endian16(81);
+		USHORT port_raw5 = Endian16(8081);
+		USHORT port_raw6 = Endian16(4000);
+		USHORT port_raw7 = Endian16(3000);
 
 		// Analyze if the packet is a part of HTTP
 		if ((p->TypeL3 == L3_IPV4 || p->TypeL3 == L3_IPV6) && p->TypeL4 == L4_TCP)
 		{
 			TCP_HEADER *tcp = p->L4.TCPHeader;
-			if (tcp != NULL && (tcp->DstPort == port_raw || tcp->DstPort == port_raw2) &&
+			if (tcp != NULL && (tcp->DstPort == port_raw || tcp->DstPort == port_raw2 || tcp->DstPort == port_raw4 || tcp->DstPort == port_raw5 || tcp->DstPort == port_raw6 || tcp->DstPort == port_raw7 ||
+													tcp->SrcPort == port_raw || tcp->SrcPort == port_raw2 || tcp->SrcPort == port_raw4 || tcp->SrcPort == port_raw5 || tcp->SrcPort == port_raw6 || tcp->SrcPort == port_raw7) &&
 				(!((tcp->Flag & TCP_SYN) || (tcp->Flag & TCP_RST) || (tcp->Flag & TCP_FIN))))
 			{
 				if (p->PayloadSize >= 1)
@@ -1858,7 +1848,7 @@ PKT *ParsePacketEx4(UCHAR *buf, UINT size, bool no_l3, UINT vlan_type_id, bool b
 					p->HttpLog = ParseHttpAccessLog(p);
 				}
 			}
-			if (tcp != NULL && tcp->DstPort == port_raw3 &&
+			if (tcp != NULL && (tcp->DstPort == port_raw3 || tcp->SrcPort == port_raw3) &&
 				(!((tcp->Flag & TCP_SYN) || (tcp->Flag & TCP_RST) || (tcp->Flag & TCP_FIN))))
 			{
 				if (p->PayloadSize >= 1)
@@ -2087,11 +2077,26 @@ HTTPLOG *ParseHttpAccessLog(PKT *pkt)
 	}
 
 	// Check whether it starts with the HTTP-specific string
-	if (CmpCaseIgnore(buf, "GET ", 4) != 0 &&
+	if (
+		CmpCaseIgnore(buf, "HTTP/1.", 7) != 0 &&
+		CmpCaseIgnore(buf, "GET ", 4) != 0 &&
 		CmpCaseIgnore(buf, "HEAD ", 5) != 0 &&
+		CmpCaseIgnore(buf, "PUT ", 4) != 0 &&
+		CmpCaseIgnore(buf, "PATCH ", 6) != 0 &&
+		CmpCaseIgnore(buf, "DELETE ", 7) != 0 &&
 		CmpCaseIgnore(buf, "POST ", 5) != 0)
 	{
-		return NULL;
+		// Look for HTTP response in the mid of the buffer
+		UINT i = SearchBin(buf, 0, size, "HTTP/1.", 7);
+
+		if (i == INFINITE)
+		{	
+			return NULL;
+		}
+		else
+		{
+			buf += i;
+		}
 	}
 
 	Zero(&h, sizeof(h));
@@ -2109,18 +2114,31 @@ HTTPLOG *ParseHttpAccessLog(PKT *pkt)
 		TOKEN_LIST *tokens = ParseToken(line1, " \t");
 		if (tokens != NULL)
 		{
-			if (tokens->NumTokens == 3)
+			if (tokens->NumTokens >= 3)
 			{
-				StrCpy(h.Method, sizeof(h.Hostname), tokens->Token[0]);
-				Trim(h.Method);
+				if(CmpCaseIgnore(tokens->Token[0], "HTTP/1.", 7) == 0)
+				{
+					// HTTP response
+					StrCpy(h.Status, sizeof(h.Status), tokens->Token[1]);
+					Trim(h.Status);
 
-				StrCpy(h.Path, sizeof(h.Path), tokens->Token[1]);
-				Trim(h.Path);
+					StrCpy(h.Message, sizeof(h.Message), line1 + strlen("HTTP/1.1 404 "));
+					Trim(h.Message);
+				}
+				else
+				{
+					// HTTP request
+					StrCpy(h.Method, sizeof(h.Hostname), tokens->Token[0]);
+					Trim(h.Method);
 
-				StrCpy(h.Protocol, sizeof(h.Protocol), tokens->Token[2]);
-				Trim(h.Protocol);
+					StrCpy(h.Path, sizeof(h.Path), tokens->Token[1]);
+					Trim(h.Path);
 
-				StrUpper(h.Method);
+					StrCpy(h.Protocol, sizeof(h.Protocol), tokens->Token[2]);
+					Trim(h.Protocol);
+
+					StrUpper(h.Method);
+				}
 
 				while (true)
 				{
@@ -2162,7 +2180,7 @@ HTTPLOG *ParseHttpAccessLog(PKT *pkt)
 					Free(line);
 				}
 
-				if (IsEmptyStr(h.Hostname) == false)
+				if (IsEmptyStr(h.Hostname) == false || IsEmptyStr(h.Status) == false)
 				{
 					ok = true;
 				}
@@ -4325,3 +4343,7 @@ LABEL_CLEANUP:
 		return NULL;
 	}
 }
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/

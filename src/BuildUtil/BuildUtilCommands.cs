@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Build Utility
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -1346,3 +1346,7 @@ namespace BuildUtil
 	}
 }
 
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/

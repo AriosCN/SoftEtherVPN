@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Mayaqua Kernel
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -488,7 +488,6 @@ bool WriteSecKey(SECURE *sec, bool private_obj, char *name, K *k)
 	RSA *rsa;
 	UCHAR modules[MAX_SIZE], pub[MAX_SIZE], pri[MAX_SIZE], prime1[MAX_SIZE], prime2[MAX_SIZE];
 	UCHAR exp1[MAX_SIZE], exp2[MAX_SIZE], coeff[MAX_SIZE];
-	const BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 	CK_ATTRIBUTE a[] =
 	{
 		{CKA_MODULUS,			modules,		0},		// 0
@@ -537,64 +536,48 @@ bool WriteSecKey(SECURE *sec, bool private_obj, char *name, K *k)
 	}
 
 	// Numeric data generation
-	rsa = EVP_PKEY_get0_RSA(k->pkey);
+	rsa = k->pkey->pkey.rsa;
 	if (rsa == NULL)
 	{
 		sec->Error = SEC_ERROR_BAD_PARAMETER;
 		return false;
 	}
-
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-	RSA_get0_key(rsa, &n, &e, &d);
-	RSA_get0_factors(rsa, &p, &q);
-	RSA_get0_crt_params(rsa, &dmp1, &dmq1, &iqmp);
-#else
-	n = rsa->n;
-	e = rsa->e;
-	d = rsa->d;
-	p = rsa->p;
-	q = rsa->q;
-	dmp1 = rsa->dmp1;
-	dmq1 = rsa->dmq1;
-	iqmp = rsa->iqmp;
-#endif
-
-	b = BigNumToBuf(n);
+	b = BigNumToBuf(rsa->n);
 	ReadBuf(b, modules, sizeof(modules));
 	A_SIZE(a, 0) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(e);
+	b = BigNumToBuf(rsa->e);
 	ReadBuf(b, pub, sizeof(pub));
 	A_SIZE(a, 1) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(d);
+	b = BigNumToBuf(rsa->d);
 	ReadBuf(b, pri, sizeof(pri));
 	A_SIZE(a, 2) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(p);
+	b = BigNumToBuf(rsa->p);
 	ReadBuf(b, prime1, sizeof(prime1));
 	A_SIZE(a, 3) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(q);
+	b = BigNumToBuf(rsa->q);
 	ReadBuf(b, prime2, sizeof(prime2));
 	A_SIZE(a, 4) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(dmp1);
+	b = BigNumToBuf(rsa->dmp1);
 	ReadBuf(b, exp1, sizeof(exp1));
 	A_SIZE(a, 5) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(dmq1);
+	b = BigNumToBuf(rsa->dmq1);
 	ReadBuf(b, exp2, sizeof(exp2));
 	A_SIZE(a, 6) = b->Size;
 	FreeBuf(b);
 
-	b = BigNumToBuf(iqmp);
+	b = BigNumToBuf(rsa->iqmp);
 	ReadBuf(b, coeff, sizeof(coeff));
 	A_SIZE(a, 7) = b->Size;
 	FreeBuf(b);
@@ -803,6 +786,11 @@ bool WriteSecCert(SECURE *sec, bool private_obj, char *name, X *x)
 	if(sec->Dev->Id == 18 || sec->Dev->Id == 19)
 	{
 		b_private_obj = false;
+	}
+
+	// CryptoID PKCS#11 requires CKA_ID attiribute instead of CKA_LABEL.
+	if(sec->Dev->Id == 22) {
+		a[7].type = CKA_ID;
 	}
 
 	// Remove objects which have the same name
@@ -2272,3 +2260,7 @@ void FreeSecure()
 }
 
 
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/

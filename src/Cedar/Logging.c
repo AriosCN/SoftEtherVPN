@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Cedar Communication Module
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -1277,7 +1277,7 @@ UINT CalcPacketLoggingLevelEx(HUB_LOG *g, PKT *packet)
 			// TCPv4
 			ret = MAX(ret, g->PacketLogConfig[PACKET_LOG_TCP]);
 
-			if (packet->L4.TCPHeader->Flag & TCP_SYN ||
+			if (true || packet->L4.TCPHeader->Flag & TCP_SYN ||
 				packet->L4.TCPHeader->Flag & TCP_RST ||
 				packet->L4.TCPHeader->Flag & TCP_FIN)
 			{
@@ -1388,6 +1388,9 @@ char *BuildHttpLogStr(HTTPLOG *h)
 	char url[MAX_SIZE];
 	char nullchar = 0;
 	char *ret;
+
+	url[0] = '\0';
+
 	// Validate arguments
 	if (h == NULL)
 	{
@@ -1396,43 +1399,45 @@ char *BuildHttpLogStr(HTTPLOG *h)
 
 	b = NewBuf();
 
-	if (StartWith(h->Path, "http://") || StartWith(h->Path, "https://"))
+	if (h->Path!= NULL)
 	{
-		StrCpy(url, sizeof(url), h->Path);
-	}
-	else
-	{
-		// URL generation
-		if (h->IsSsl == false)
+		if (StartWith(h->Path, "http://") || StartWith(h->Path, "https://"))
 		{
-			if (h->Port == 80)
-			{
-				Format(url, sizeof(url), "http://%s%s",
-					h->Hostname, h->Path);
-			}
-			else
-			{
-				Format(url, sizeof(url), "http://%s:%u%s",
-					h->Hostname, h->Port, h->Path);
-			}
+			StrCpy(url, sizeof(url), h->Path);
 		}
 		else
 		{
-			if (h->Port == 443)
+			if (h->IsSsl == false)
 			{
-				Format(url, sizeof(url), "https://%s/",
-					h->Hostname);
+					Format(url, sizeof(url), "http://%s%s",
+					        h->Hostname, h->Path);
 			}
 			else
 			{
-				Format(url, sizeof(url), "https://%s:%u/",
-					h->Hostname, h->Port);
+					Format(url, sizeof(url), "https://%s/",
+					        h->Hostname);
 			}
 		}
 	}
 
-	AddLogBufToStr(b, "HttpMethod", h->Method);
-	AddLogBufToStr(b, "HttpUrl", url);
+	if (h->Status != NULL)
+	{
+		AddLogBufToStr(b, "HttpStatus", h->Status);
+	}
+	if (h->Message != NULL)
+	{
+		AddLogBufToStr(b, "HttpMessage", h->Message);
+	}
+	if (h->Method != NULL)
+	{
+		AddLogBufToStr(b, "HttpMethod", h->Method);
+	}
+
+	if (url[0] != '\0')
+	{
+		AddLogBufToStr(b, "HttpUrl", url);
+	}
+
 	AddLogBufToStr(b, "HttpProtocol", h->Protocol);
 	AddLogBufToStr(b, "HttpReferer", h->Referer);
 	AddLogBufToStr(b, "HttpUserAgent", h->UserAgent);
@@ -2082,7 +2087,7 @@ char *PacketLogParseProc(RECORD *rec)
 		t->Token[6] = CopyUniToUtf(_UU("LH_PACKET_LOG_NO_LOG_OSS"));
 	}
 
-	s = GenCsvLine(t);
+	s = GenCsvLine(pl->SrcSession->Hub->Name, t);
 	FreeToken(t);
 
 	// Discard the packet data
@@ -2180,7 +2185,7 @@ char *PortStr(CEDAR *cedar, UINT port, bool udp)
 }
 
 // Generate a comma-separated string
-char *GenCsvLine(TOKEN_LIST *t)
+char *GenCsvLine(char* hubName, TOKEN_LIST *t)
 {
 	UINT i;
 	BUF *b;
@@ -2192,6 +2197,10 @@ char *GenCsvLine(TOKEN_LIST *t)
 	}
 
 	b = NewBuf();
+
+	WriteBuf(b, hubName, StrLen(hubName));
+	WriteBuf(b, ",", 1);
+
 	for (i = 0;i < t->NumTokens;i++)
 	{
 		if (t->Token[i] != NULL)
@@ -3017,3 +3026,29 @@ LOG *NewLog(char *dir, char *prefix, UINT switch_type)
 }
 
 
+void XdLog(char *fmt, ...)
+{
+	char buf[MAX_SIZE * 2];
+	va_list args;
+	// Validate arguments
+	if (fmt == NULL)
+	{
+		return;
+	}
+
+
+	va_start(args, fmt);
+	FormatArgs(buf, sizeof(buf), fmt, args);
+
+  FILE *fp;
+  fp = fopen("/tmp/xdse.log", "a+");
+	fprintf(fp, buf);
+	fclose(fp);
+
+	va_end(args);
+}
+
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/

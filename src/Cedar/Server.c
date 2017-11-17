@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Cedar Communication Module
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -923,11 +923,7 @@ void SiWriteSysLog(SERVER *s, char *typestr, char *hubname, wchar_t *message)
 
 	// Date and time
 	LocalTime(&st);
-	if(s->StrictSyslogDatetimeFormat){
-		GetDateTimeStrRFC3164(datetime, sizeof(datetime), &st, GetCurrentTimezone());
-	}else{
-		GetDateTimeStrMilli(datetime, sizeof(datetime), &st);
-	}
+	GetDateTimeStrMilli(datetime, sizeof(datetime), &st);
 
 	if (IsEmptyStr(hubname) == false)
 	{
@@ -939,8 +935,6 @@ void SiWriteSysLog(SERVER *s, char *typestr, char *hubname, wchar_t *message)
 		UniFormat(tmp, sizeof(tmp), L"[%S/VPN] (%S) <%S>: %s",
 			machinename, datetime, typestr, message);
 	}
-
-	Debug("Syslog send: %S\n",tmp);
 
 	SendSysLog(s->Syslog, tmp);
 }
@@ -1374,7 +1368,7 @@ void UpdateGlobalServerFlags(SERVER *s, CAPSLIST *t)
 		return;
 	}
 
-	is_restricted = SiIsEnterpriseFunctionsRestrictedOnOpenSource(s->Cedar);
+	//is_restricted = SiIsEnterpriseFunctionsRestrictedOnOpenSource(s->Cedar);
 
 	SetGlobalServerFlag(GSF_DISABLE_PUSH_ROUTE, is_restricted);
 	SetGlobalServerFlag(GSF_DISABLE_RADIUS_AUTH, is_restricted);
@@ -6183,8 +6177,6 @@ void SiLoadServerCfg(SERVER *s, FOLDER *f)
 		c->SslAcceptSettings.Tls_Disable1_0 = CfgGetBool(f, "Tls_Disable1_0");
 		c->SslAcceptSettings.Tls_Disable1_1 = CfgGetBool(f, "Tls_Disable1_1");
 		c->SslAcceptSettings.Tls_Disable1_2 = CfgGetBool(f, "Tls_Disable1_2");
-
-		s->StrictSyslogDatetimeFormat = CfgGetBool(f, "StrictSyslogDatetimeFormat");
 	}
 	Unlock(c->lock);
 
@@ -6500,8 +6492,6 @@ void SiWriteServerCfg(FOLDER *f, SERVER *s)
 
 		// Disable session reconnect
 		CfgAddBool(f, "DisableSessionReconnect", GetGlobalServerFlag(GSF_DISABLE_SESSION_RECONNECT));
-
-		CfgAddBool(f, "StrictSyslogDatetimeFormat", s->StrictSyslogDatetimeFormat);
 	}
 	Unlock(c->lock);
 }
@@ -11077,3 +11067,7 @@ SERVER *SiNewServerEx(bool bridge, bool in_client_inner_server, bool relay_serve
 	return s;
 }
 
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/

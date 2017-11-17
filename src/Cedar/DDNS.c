@@ -1,17 +1,17 @@
-// SoftEther VPN Source Code - Developer Edition Master Branch
+// SoftEther VPN Source Code
 // Cedar Communication Module
 // 
 // SoftEther VPN Server, Client and Bridge are free software under GPLv2.
 // 
-// Copyright (c) Daiyuu Nobori.
-// Copyright (c) SoftEther VPN Project, University of Tsukuba, Japan.
-// Copyright (c) SoftEther Corporation.
+// Copyright (c) 2012-2016 Daiyuu Nobori.
+// Copyright (c) 2012-2016 SoftEther VPN Project, University of Tsukuba, Japan.
+// Copyright (c) 2012-2016 SoftEther Corporation.
 // 
 // All Rights Reserved.
 // 
 // http://www.softether.org/
 // 
-// Author: Daiyuu Nobori, Ph.D.
+// Author: Daiyuu Nobori
 // Comments: Tetsuo Sugiyama, Ph.D.
 // 
 // This program is free software; you can redistribute it and/or
@@ -624,9 +624,8 @@ UINT DCRegister(DDNS_CLIENT *c, bool ipv6, DDNS_REGISTER_PARAM *p, char *replace
 	PackAddInt(req, "lasterror_ipv4", c->Err_IPv4_GetMyIp);
 	PackAddInt(req, "lasterror_ipv6", c->Err_IPv6_GetMyIp);
 	PackAddBool(req, "use_azure", use_azure);
-	PackAddStr(req, "product_str", "SoftEther OSS");
+	PackAddStr(req, "product_str", CEDAR_PRODUCT_STR);
 	PackAddInt(req, "ddns_protocol_version", DDNS_VERSION);
-	PackAddInt(req, "ddns_oss", 1);
 
 
 	if (use_azure)
@@ -1047,3 +1046,7 @@ void DCGenNewKey(UCHAR *key)
 }
 
 
+
+// Developed by SoftEther VPN Project at University of Tsukuba in Japan.
+// Department of Computer Science has dozens of overly-enthusiastic geeks.
+// Join us: http://www.tsukuba.ac.jp/english/admission/
